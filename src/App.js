@@ -1,30 +1,26 @@
 import React, { useState } from 'react';
-import VisorMapa from './VisorMapa'; // Su código actual del mapa muévalo aquí o déjelo integrado
+import VisorTactico from './VisorTactico'; // Deberá renombrar su App.js actual como VisorTactico.js o integrar el código aquí
 import Asignador from './Asignador';
 
 function App() {
-  const [pestaña, setPestaña] = useState('mapa');
+  const [vista, setVista] = useState('mapa');
 
   return (
-    <div>
-      {/* Barra de Navegación de Comando */}
-      <nav style={{ backgroundColor: '#00251a', padding: '10px', display: 'flex', gap: '20px' }}>
-        <button 
-          onClick={() => setPestaña('mapa')}
-          style={{ background: pestaña === 'mapa' ? '#2e7d32' : 'transparent', color: 'white', border: '1px solid white', padding: '10px 20px', cursor: 'pointer', borderRadius: '5px' }}
-        >
-          📍 VISOR TÁCTICO
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* BARRA DE COMANDO SUPERIOR */}
+      <nav style={{ backgroundColor: '#00251a', padding: '10px', display: 'flex', gap: '20px', justifyContent: 'center', borderBottom: '2px solid #ffeb3b' }}>
+        <button onClick={() => setVista('mapa')} style={{ background: vista === 'mapa' ? '#2e7d32' : 'transparent', color: 'white', border: '1px solid white', padding: '8px 20px', cursor: 'pointer', borderRadius: '4px', fontWeight: 'bold' }}>
+          📍 VISOR TÁCTICO (MAPA)
         </button>
-        <button 
-          onClick={() => setPestaña('admin')}
-          style={{ background: pestaña === 'admin' ? '#2e7d32' : 'transparent', color: 'white', border: '1px solid white', padding: '10px 20px', cursor: 'pointer', borderRadius: '5px' }}
-        >
-          ⚙️ ADMINISTRACIÓN DE PERSONAL
+        <button onClick={() => setVista('admin')} style={{ background: vista === 'admin' ? '#2e7d32' : 'transparent', color: 'white', border: '1px solid white', padding: '8px 20px', cursor: 'pointer', borderRadius: '4px', fontWeight: 'bold' }}>
+          ⚙️ ASIGNACIÓN DE PERSONAL
         </button>
       </nav>
 
-      {/* Contenido Dinámico */}
-      {pestaña === 'mapa' ? <VisorMapa /> : <Asignador />}
+      {/* CONTENIDO DINÁMICO */}
+      <div style={{ flex: 1 }}>
+        {vista === 'mapa' ? <VisorTactico /> : <Asignador />}
+      </div>
     </div>
   );
 }
