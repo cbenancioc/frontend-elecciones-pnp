@@ -50,11 +50,11 @@ function App() {
             />
           </LayersControl.BaseLayer>
           
-          {/* CAPA 2: VISTA SATELITAL (ISR) */}
+          {/* CAPA 2: VISTA SATELITAL (GOOGLE) */}
           <LayersControl.BaseLayer name="Vista Satelital (ISR)">
             <TileLayer
-              attribution='Esri, DigitalGlobe, GeoEye, Earthstar Geographics'
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{y}/{x}/{z}"
+              attribution='&copy; Google Maps'
+              url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
             />
           </LayersControl.BaseLayer>
 
