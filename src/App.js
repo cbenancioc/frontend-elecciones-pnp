@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, LayersControl, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Icono Estético
+// Icono Estético Táctico
 const iconoLocal = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
   iconSize: [25, 41],
@@ -17,7 +17,7 @@ function App() {
   const [dataFull, setDataFull] = useState(null);
   const [distritosActivos, setDistritosActivos] = useState(["ATE", "LA MOLINA", "SAN LUIS", "SANTA ANITA", "CIENEGUILLA"]);
   const [idBuscado, setIdBuscado] = useState("");
-  const [mapRef, setMapRef] = useState(null);
+  const mapRef = useRef(null); // Cambio a useRef para mayor estabilidad
 
   const distritosZonaEste = ["ATE", "LA MOLINA", "SAN LUIS", "SANTA ANITA", "CIENEGUILLA"];
   const centroZonaEste = [-12.043, -76.915];
@@ -26,14 +26,12 @@ function App() {
     fetch('/centros_votacion_este2.json')
       .then(res => res.json())
       .then(data => {
-        if (data && data.features) {
-          setDataFull(data);
-        }
+        if (data && data.features) setDataFull(data);
       })
       .catch(err => console.error("Error en despliegue:", err));
   }, []);
 
-  // FILTRADO SEGURO: Evita que la pantalla se ponga en blanco
+  // FILTRADO SEGURO
   const localesFiltrados = useMemo(() => {
     if (!dataFull || !dataFull.features) return [];
     return dataFull.features.filter(f => 
@@ -41,12 +39,15 @@ function App() {
     );
   }, [dataFull, distritosActivos]);
 
+  // MANIOBRA DE LOCALIZACIÓN (Corrección del error mapRef)
   const localizarID = () => {
-    if (!dataFull || !mapRef || !idBuscado) return;
+    if (!dataFull || !mapRef.current || !idBuscado) return;
     const local = dataFull.features.find(f => f.properties.OBJECTID.toString() === idBuscado);
     if (local) {
       const coords = [local.geometry.coordinates[1], local.geometry.coordinates[0]];
-      mapRef.flyTo(coords, 18);
+      mapRef.current.flyTo(coords, 18);
+    } else {
+      alert("ID de Local no encontrado.");
     }
   };
 
@@ -62,7 +63,7 @@ function App() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '1.1rem' }}>🛡️ COMANDO ELECTORAL - ZONA ESTE 2</h2>
-            <small>INTELIGENCIA PNP</small>
+            <small>DIRIN PNP - INTELIGENCIA</small>
           </div>
           <div style={{ background: 'rgba(255,255,255,0.1)', padding: '8px', borderRadius: '6px' }}>
             <input 
@@ -72,12 +73,12 @@ function App() {
               onChange={(e) => setIdBuscado(e.target.value)}
               style={{ padding: '5px', width: '70px', border: 'none', borderRadius: '4px' }}
             />
-            <button onClick={localizarID} style={{ marginLeft: '5px', padding: '5px 10px', background: '#2e7d32', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>BUSCAR</button>
+            <button onClick={localizarID} style={{ marginLeft: '5px', padding: '5px 10px', background: '#2e7d32', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>BUSCAR</button>
           </div>
         </div>
-        <div style={{ marginTop: '10px', display: 'flex', gap: '10px', fontSize: '0.8rem', background: '#003d33', padding: '5px', borderRadius: '4px' }}>
+        <div style={{ marginTop: '10px', display: 'flex', gap: '15px', fontSize: '0.85rem', background: '#003d33', padding: '8px', borderRadius: '4px' }}>
           {distritosZonaEste.map(dist => (
-            <label key={dist} style={{ cursor: 'pointer' }}>
+            <label key={dist} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
               <input type="checkbox" checked={distritosActivos.includes(dist)} onChange={() => manejarCheck(dist)} /> {dist}
             </label>
           ))}
@@ -88,7 +89,7 @@ function App() {
         center={centroZonaEste} 
         zoom={12} 
         style={{ flex: 1 }} 
-        whenCreated={setMapRef} 
+        ref={mapRef} 
         preferCanvas={true}
       >
         <LayersControl position="topright">
@@ -96,4 +97,41 @@ function App() {
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           </LayersControl.BaseLayer>
           <LayersControl.BaseLayer name="Satelital ISR">
-            <TileLayer url="
+            <TileLayer url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}" />
+          </LayersControl.BaseLayer>
+
+          {dataFull && (
+            <GeoJSON 
+              key={distritosActivos.join(',')} 
+              data={{ type: "FeatureCollection", features: localesFiltrados }}
+              pointToLayer={(feature, latlng) => {
+                const marcador = L.marker(latlng, { icon: iconoLocal });
+                marcador.bindTooltip(`<b>${feature.properties.NOMBRE_DEL}</b>`, {
+                  permanent: true,
+                  direction: 'right',
+                  offset: [10, -15],
+                  opacity: 0.85
+                });
+                return marcador;
+              }}
+              onEachFeature={(feature, layer) => {
+                const p = feature.properties;
+                layer.bindPopup(`
+                  <div style="min-width:200px">
+                    <b style="color:#1b5e20">ID: ${p.OBJECTID}</b><br/>
+                    <strong style="color:#0d47a1">${p.NOMBRE_DEL}</strong><hr/>
+                    <b>📍 Dirección:</b> ${p.DIRECCIÓN}<br/>
+                    <b>🗳️ Mesas:</b> ${p.MESAS} | <b>👥 Electores:</b> ${p.ELECTORES}
+                  </div>
+                `);
+              }}
+            />
+          )}
+        </LayersControl>
+      </MapContainer>
+    </div>
+  );
+}
+
+export default App;
+      
