@@ -22,6 +22,7 @@ function App() {
       .then(data => {
         console.log("Datos recibidos:", data);
         setPuntos(data);
+        Carga en la Bóveda: Una vez tenga el archivo centros_votacion_este2.json, lo subiremos a la carpeta public de su repositorio Frontend para que Leaflet lo dibuje como una capa oficial sobre el mapa satelital.
       })
       .catch(err => console.error("Falla en enlace de datos:", err));
   }, []);
