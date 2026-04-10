@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import VisorTactico from './VisorTactico'; // Deberá renombrar su App.js actual como VisorTactico.js o integrar el código aquí
 import Asignador from './Asignador';
 
-function App() {
+function VisorTactico() {
   const [vista, setVista] = useState('mapa');
 
   return (
