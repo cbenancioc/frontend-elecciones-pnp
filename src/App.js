@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, LayersControl, GeoJSON } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, LayersControl, GeoJSON, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -13,11 +13,22 @@ const iconoLocal = new L.Icon({
   shadowSize: [41, 41]
 });
 
+// COMPONENTE PARA DETECTAR ZOOM
+function ZoomHandler({ setZoom }) {
+  useMapEvents({
+    zoomend: (e) => {
+      setZoom(e.target.getZoom());
+    },
+  });
+  return null;
+}
+
 function App() {
   const [dataFull, setDataFull] = useState(null);
   const [distritosActivos, setDistritosActivos] = useState(["ATE", "LA MOLINA", "SAN LUIS", "SANTA ANITA", "CIENEGUILLA"]);
   const [idBuscado, setIdBuscado] = useState("");
-  const mapRef = useRef(null); // Cambio a useRef para mayor estabilidad
+  const [zoomLevel, setZoomLevel] = useState(12);
+  const mapRef = useRef(null);
 
   const distritosZonaEste = ["ATE", "LA MOLINA", "SAN LUIS", "SANTA ANITA", "CIENEGUILLA"];
   const centroZonaEste = [-12.043, -76.915];
@@ -31,7 +42,6 @@ function App() {
       .catch(err => console.error("Error en despliegue:", err));
   }, []);
 
-  // FILTRADO SEGURO
   const localesFiltrados = useMemo(() => {
     if (!dataFull || !dataFull.features) return [];
     return dataFull.features.filter(f => 
@@ -39,15 +49,12 @@ function App() {
     );
   }, [dataFull, distritosActivos]);
 
-  // MANIOBRA DE LOCALIZACIÓN (Corrección del error mapRef)
   const localizarID = () => {
     if (!dataFull || !mapRef.current || !idBuscado) return;
     const local = dataFull.features.find(f => f.properties.OBJECTID.toString() === idBuscado);
     if (local) {
       const coords = [local.geometry.coordinates[1], local.geometry.coordinates[0]];
       mapRef.current.flyTo(coords, 18);
-    } else {
-      alert("ID de Local no encontrado.");
     }
   };
 
@@ -92,6 +99,7 @@ function App() {
         ref={mapRef} 
         preferCanvas={true}
       >
+        <ZoomHandler setZoom={setZoomLevel} />
         <LayersControl position="topright">
           <LayersControl.BaseLayer checked name="Mapa Táctico">
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -102,16 +110,20 @@ function App() {
 
           {dataFull && (
             <GeoJSON 
-              key={distritosActivos.join(',')} 
+              key={`${distritosActivos.join(',')}-${zoomLevel > 14}`} 
               data={{ type: "FeatureCollection", features: localesFiltrados }}
               pointToLayer={(feature, latlng) => {
                 const marcador = L.marker(latlng, { icon: iconoLocal });
-                marcador.bindTooltip(`<b>${feature.properties.NOMBRE_DEL}</b>`, {
-                  permanent: true,
-                  direction: 'right',
-                  offset: [10, -15],
-                  opacity: 0.85
-                });
+                
+                // DINÁMICA DE ZOOM: Solo muestra nombres si el zoom es mayor a 14
+                if (zoomLevel > 14) {
+                  marcador.bindTooltip(`<b>${feature.properties.NOMBRE_DEL}</b>`, {
+                    permanent: true,
+                    direction: 'right',
+                    offset: [10, -15],
+                    opacity: 0.85
+                  });
+                }
                 return marcador;
               }}
               onEachFeature={(feature, layer) => {
@@ -134,4 +146,3 @@ function App() {
 }
 
 export default App;
-      
