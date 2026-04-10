@@ -30,7 +30,7 @@ function App() {
   const [zoomLevel, setZoomLevel] = useState(12);
   const mapRef = useRef(null);
 
-  const distritosZonaEste = ["ATE", "LA MOLINA", "SAN LUIS", "SANTA ANITA", "CIENEGUILLA"];
+  const distritosZonaEste = ["ATE ", "LA MOLINA", "SAN LUIS", "SANTA ANITA", "CIENEGUILLA"];
   const centroZonaEste = [-12.043, -76.915];
 
   useEffect(() => {
