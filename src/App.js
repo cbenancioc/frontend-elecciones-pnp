@@ -1,45 +1,85 @@
-const express = require('express');
-const { Pool } = require('pg');
-const cors = require('cors');
+import React, { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, LayersControl } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// CONFIGURACIÓN DE CONEXIÓN (PUENTE DIRECTO)
-const pool = new Pool({
-    connectionString: "postgresql://postgres.fdexkgchsrzclllpxsrf:Ybena230297PNP@aws-1-sa-east-1.pooler.supabase.com:6543/postgres",
-    ssl: { rejectUnauthorized: false }
+// CORRECCIÓN TÁCTICA DE ÍCONOS
+const iconoRojo = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
 });
 
-// RUTA 1: VERIFICACIÓN DE ESTADO
-app.get('/', (req, res) => {
-    res.send('SERVIDOR PNP OPERATIVO');
-});
+function App() {
+  const [puntos, setPuntos] = useState([]);
+  const posicionLima = [-12.046374, -77.042793]; // Centro Histórico
 
-// RUTA 2: EXTRACCIÓN DE PUNTOS CRÍTICOS (PARA EL MAPA)
-app.get('/puntos-criticos', async (req, res) => {
-    try {
-        const resultado = await pool.query('SELECT * FROM puntos_criticos');
-        res.json(resultado.rows);
-    } catch (err) {
-        console.error("Error en base de datos:", err.message);
-        res.status(500).json({ error: "Error al obtener puntos tácticos" });
-    }
-});
+  useEffect(() => {
+    // RECONOCIMIENTO DE DATOS: Llamada al servidor en Render
+    fetch('https://backend-elecciones-pnp-2026.onrender.com/puntos-criticos')
+      .then(res => res.json())
+      .then(data => {
+        console.log("Datos recibidos:", data);
+        setPuntos(data);
+      })
+      .catch(err => console.error("Falla en enlace de datos:", err));
+  }, []);
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`=============================================`);
-    console.log(`🛡️ SERVIDOR C.C. OPERACIONES INICIADO EN PUERTO ${PORT}`);
-    console.log(`=============================================`);
-});
+  return (
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <header style={{ 
+        backgroundColor: '#004d40', 
+        color: 'white', 
+        padding: '12px', 
+        textAlign: 'center',
+        boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
+        zIndex: 1000 
+      }}>
+        <h2 style={{ margin: 0 }}>🛡️ SISTEMA DE GEORREFERENCIACIÓN OPERATIVA - PNP</h2>
+      </header>
 
-// VERIFICACIÓN DE CONEXIÓN INICIAL
-pool.query('SELECT NOW()', (err, res) => {
-    if (err) {
-        console.log("❌ Error de conexión:", err.message);
-    } else {
-        console.log("✅ ¡Conectado exitosamente a PostgreSQL (Modo Confianza)!");
-    }
-});
+      <MapContainer center={posicionLima} zoom={13} style={{ height: '100%', width: '100%' }}>
+        <LayersControl position="topright">
+          
+          {/* CAPA 1: MAPA CALLEJERO */}
+          <LayersControl.BaseLayer checked name="Mapa de Calles">
+            <TileLayer
+              attribution='&copy; OpenStreetMap'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+          </LayersControl.BaseLayer>
+          
+          {/* CAPA 2: VISTA SATELITAL (ISR) */}
+          <LayersControl.BaseLayer name="Vista Satelital (ISR)">
+            <TileLayer
+              attribution='Esri, DigitalGlobe, GeoEye, Earthstar Geographics'
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{y}/{x}/{z}"
+            />
+          </LayersControl.BaseLayer>
+
+          {/* CAPA DE INTELIGENCIA: MARCADORES */}
+          <LayersControl.Overlay checked name="Puntos Críticos">
+            <>
+              {puntos.map(punto => (
+                <Marker key={punto.id} position={[punto.latitud, punto.longitud]} icon={iconoRojo}>
+                  <Popup>
+                    <div style={{ textAlign: 'center' }}>
+                      <strong style={{ color: '#d32f2f' }}>{punto.nombre}</strong><br/>
+                      <hr/>
+                      {punto.descripcion}<br/>
+                      <strong>Nivel: {punto.nivel_riesgo}</strong>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </>
+          </LayersControl.Overlay>
+
+        </LayersControl>
+      </MapContainer>
+    </div>
+  );
+}
+
+export default App;
