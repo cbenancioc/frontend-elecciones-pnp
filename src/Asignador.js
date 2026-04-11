@@ -8,7 +8,7 @@ function Asignador() {
 
   useEffect(() => {
     // Carga de Personal con manejo de errores
-    fetch('https://backend-elecciones-pnp-2026.onrender.com/personal-asignado')
+   fetch('https://backend-elecciones-pnp-2026.onrender.com/personal-asignado')
       .then(res => res.json())
       .then(data => {
         setPersonal(Array.isArray(data) ? data : []);
