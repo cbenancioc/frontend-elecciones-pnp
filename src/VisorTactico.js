@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, LayersControl, GeoJSON, useMapE
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Iconografía
+// Iconografía Táctica
 const iconoLocal = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
   iconSize: [25, 41],
@@ -18,7 +18,6 @@ function ZoomHandler({ setZoom }) {
   return null;
 }
 
-// CAMBIO CRÍTICO: El nombre de la función debe ser VisorTactico
 function VisorTactico() {
   const [dataFull, setDataFull] = useState(null);
   const [dataPersonal, setDataPersonal] = useState([]);
@@ -29,23 +28,17 @@ function VisorTactico() {
 
   const distritosZonaEste = ["ATE", "LA MOLINA", "SAN LUIS", "SANTA ANITA", "CIENEGUILLA"];
   
+  // Normalización para vinculación (Iguala nombres de locales)
   const limpiarTexto = (t) => (t || "").toString().toUpperCase().replace(/\./g, "").replace(/\s+/g, " ").trim();
 
   useEffect(() => {
-    fetch('/centros_votacion_este2.json')
-      .then(res => res.json())
-      .then(data => { if (data && data.features) setDataFull(data); });
-
-    fetch('https://backend-elecciones-pnp-2026.onrender.com/personal-asignado')
-      .then(res => res.json())
-      .then(data => { if (Array.isArray(data)) setDataPersonal(data); });
+    fetch('/centros_votacion_este2.json').then(res => res.json()).then(setDataFull);
+    fetch('https://backend-elecciones-pnp-2026.onrender.com/personal-asignado').then(res => res.json()).then(setDataPersonal);
   }, []);
 
   const localesFiltrados = useMemo(() => {
     if (!dataFull) return [];
-    return dataFull.features.filter(f => 
-      f.properties && f.properties.DISTRITO__ && distritosActivos.includes(limpiarTexto(f.properties.DISTRITO__))
-    );
+    return dataFull.features.filter(f => distritosActivos.includes(limpiarTexto(f.properties.DISTRITO__)));
   }, [dataFull, distritosActivos]);
 
   const localizarID = () => {
@@ -59,14 +52,12 @@ function VisorTactico() {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ backgroundColor: '#00251a', color: 'white', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <header style={{ backgroundColor: '#00251a', color: 'white', padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1000 }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: '1rem' }}>📍 VISOR DE LOCALES</h3>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '5px' }}>
+          <h4 style={{ margin: 0 }}>📍 MONITOR DE LOCALES</h4>
+          <div style={{ display: 'flex', gap: '8px' }}>
             {distritosZonaEste.map(d => (
-              <label key={d} style={{ fontSize: '10px' }}>
-                <input type="checkbox" checked={distritosActivos.includes(d)} onChange={() => setDistritosActivos(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])} /> {d}
-              </label>
+              <label key={d} style={{ fontSize: '10px' }}><input type="checkbox" checked={distritosActivos.includes(d)} onChange={() => setDistritosActivos(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])} /> {d}</label>
             ))}
           </div>
         </div>
@@ -85,11 +76,12 @@ function VisorTactico() {
           pointToLayer={(f, l) => L.marker(l, { icon: iconoLocal })}
           onEachFeature={(f, layer) => {
             const p = f.properties;
-            const efectivos = dataPersonal.filter(e => limpiarTexto(e.nombre_local_asignado) === limpiarTexto(p.NOMBRE_DEL));
+            const efectivos = Array.isArray(dataPersonal) ? dataPersonal.filter(e => limpiarTexto(e.nombre_local_asignado) === limpiarTexto(p.NOMBRE_DEL)) : [];
             layer.bindPopup(`
               <div style="min-width:180px">
-                <b>${p.NOMBRE_DEL}</b><hr/>
-                🛡️ PERSONAL: ${efectivos.length > 0 ? efectivos.map(e => e.apellidos_nombres).join(', ') : 'Sin asignar'}
+                <b style="color:#0d47a1">${p.NOMBRE_DEL}</b><hr/>
+                🛡️ <b>FUERZA PNP:</b><br/>
+                ${efectivos.length > 0 ? efectivos.map(e => `• ${e.grado} ${e.apellidos_nombres}`).join('<br/>') : '<i>Sin personal asignado</i>'}
               </div>`);
           }}
         />}
@@ -98,5 +90,4 @@ function VisorTactico() {
   );
 }
 
-// CAMBIO CRÍTICO: Debe exportar VisorTactico
 export default VisorTactico;
